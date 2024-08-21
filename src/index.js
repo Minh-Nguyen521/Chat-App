@@ -1,17 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import App from './front_end/App';
+import Log from './front_end/Log';
+import reportWebVitals from './front_end/reportWebVitals';
+
+function Main() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  const handleLogin = (name) => {
+    setUserId(name);
+    setIsLoggedIn(true);
+  };
+
+  return (
+    <div>
+      {!isLoggedIn ? (
+        <Log onLogin={handleLogin} />
+      ) : (
+        <div>
+          <App userId={userId} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+root.render(<Main />);
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+
 reportWebVitals();
