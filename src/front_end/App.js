@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
-import './App.css';
+import React, { useState, useEffect, useRef } from "react";
+import "./App.css";
 
 function App({ userId }) {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const ws = useRef(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    ws.current = new WebSocket('ws://192.168.1.103:8080/ws');
+    ws.current = new WebSocket("ws://192.168.1.102:8080/ws");
 
     ws.current.onopen = () => {
-      console.log('WebSocket connection opened');
+      console.log("WebSocket connection opened");
     };
 
     ws.current.onmessage = (event) => {
@@ -21,11 +21,11 @@ function App({ userId }) {
     };
 
     ws.current.onclose = () => {
-      console.log('WebSocket connection closed');
+      console.log("WebSocket connection closed");
     };
 
     ws.current.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
     };
 
     return () => {
@@ -49,7 +49,7 @@ function App({ userId }) {
     if (inputValue.trim()) {
       const message = {
         user_id: userId,
-        content: inputValue
+        content: inputValue,
       };
 
       const formattedMessage = `${message.user_id} sent: ${message.content}`;
@@ -58,14 +58,14 @@ function App({ userId }) {
 
       setMessages((prevMessages) => [...prevMessages, formattedMessage]);
 
-      setInputValue('');
+      setInputValue("");
     }
   };
 
   const handleReaction = (react) => {
     const message = {
       user_id: userId,
-      content: react
+      content: react,
     };
 
     const formattedMessage = `${message.user_id} sent: ${message.content}`;
@@ -74,18 +74,18 @@ function App({ userId }) {
 
     setMessages((prevMessages) => [...prevMessages, formattedMessage]);
 
-    setInputValue('');
+    setInputValue("");
   };
 
   const handleKeyDown = (event) => {
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
       event.preventDefault();
       handleButtonClick();
     }
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
@@ -107,7 +107,7 @@ function App({ userId }) {
                 className="px-5 py-3 text-xl bg-blue-500 text-white rounded mb-2" // Slightly reduced padding and font size
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
-                onClick={() => handleReaction('❤️')}
+                onClick={() => handleReaction("❤️")}
               >
                 ❤️
               </button>
@@ -118,11 +118,36 @@ function App({ userId }) {
                   onMouseLeave={handleMouseLeave}
                 >
                   <div className="flex space-x-3">
-                    <button className="text-xl" onClick={() => handleReaction('👍')}>👍</button>
-                    <button className="text-xl" onClick={() => handleReaction('😢')}>😢</button>
-                    <button className="text-xl" onClick={() => handleReaction('😂')}>😂</button>
-                    <button className="text-xl" onClick={() => handleReaction('😮')}>😮</button>
-                    <button className="text-xl" onClick={() => handleReaction('😡')}>😡</button>
+                    <button
+                      className="text-xl"
+                      onClick={() => handleReaction("👍")}
+                    >
+                      👍
+                    </button>
+                    <button
+                      className="text-xl"
+                      onClick={() => handleReaction("😢")}
+                    >
+                      😢
+                    </button>
+                    <button
+                      className="text-xl"
+                      onClick={() => handleReaction("😂")}
+                    >
+                      😂
+                    </button>
+                    <button
+                      className="text-xl"
+                      onClick={() => handleReaction("😮")}
+                    >
+                      😮
+                    </button>
+                    <button
+                      className="text-xl"
+                      onClick={() => handleReaction("😡")}
+                    >
+                      😡
+                    </button>
                   </div>
                 </div>
               )}
@@ -136,7 +161,10 @@ function App({ userId }) {
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
             />
-            <button className="px-5 py-3 text-base bg-blue-500 text-white rounded" onClick={handleButtonClick}>
+            <button
+              className="px-5 py-3 text-base bg-blue-500 text-white rounded"
+              onClick={handleButtonClick}
+            >
               Send
             </button>
           </div>
