@@ -10,6 +10,6 @@
 
 # How to use
 
-Change IP App.js to your IP
-Run frontend `npm start`
-Run backend `go run main.go`
+Change IP App.js to your IP <br>
+Run frontend `npm start` <br>
+Run backend `go run main.go` <br>
