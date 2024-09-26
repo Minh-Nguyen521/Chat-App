@@ -8,4 +8,8 @@
 
 # Chat page <br>
 
-# Change IP to your IP Adress
+# How to use
+
+Change IP App.js to your IP
+Run frontend `npm start`
+Run backend `go run main.go`
