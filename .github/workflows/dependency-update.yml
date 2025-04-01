@@ -1,208 +1,54 @@
-name: Update Dependencies
+name: Dependency Update PR
 
 on:
   schedule:
-    - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight
-  workflow_dispatch:  # Allow manual trigger
-  push:
-    branches:
-      - main  # Also run on pushes to main branch
+    - cron: '0 0 * * 1' # Runs every Monday at midnight UTC
+  workflow_dispatch: # Allows manual trigger
 
 jobs:
-  update-deps:
-    runs-on: macos-latest
-    permissions:
-      contents: write
-      pull-requests: write
+  update-dependencies:
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Debug Info
-        run: |
-          echo "Running on: $(uname -a)"
-          echo "Node version: $(node --version)"
-          echo "NPM version: $(npm --version)"
-          echo "Current directory: $(pwd)"
-          echo "Repository: ${{ github.repository }}"
-          echo "Event: ${{ github.event_name }}"
-          echo "Branch: ${{ github.ref }}"
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '18'
 
       - name: Install dependencies
-        run: |
-          echo "Installing dependencies..."
-          npm ci
-          echo "Dependencies installed successfully"
-          echo "Current package.json:"
-          cat package.json
-
-      - name: Check for outdated dependencies
-        id: check-deps
-        run: |
-          echo "Checking for outdated dependencies..."
-          npm outdated --json > outdated.json
-          
-          # Get detailed dependency information
-          echo "Current dependencies:"
-          npm list --json > current-deps.json
-          
-          if [ -s outdated.json ]; then
-            echo "Found outdated dependencies:"
-            cat outdated.json
-            echo "deps_outdated=true" >> $GITHUB_OUTPUT
-            
-            # Create a detailed report
-            echo "Creating detailed dependency report..."
-            {
-              echo "## Dependency Update Report"
-              echo ""
-              echo "### Outdated Dependencies"
-              echo "```json"
-              cat outdated.json
-              echo "```"
-              echo ""
-              echo "### Current Dependencies"
-              echo "```json"
-              cat current-deps.json
-              echo "```"
-              echo ""
-              echo "### Update Summary"
-              echo "The following dependencies will be updated:"
-              jq -r 'to_entries | .[] | "- \(.key): \(.value.current) → \(.value.latest)"' outdated.json
-            } > update-report.md
-          else
-            echo "No outdated dependencies found"
-            echo "deps_outdated=false" >> $GITHUB_OUTPUT
-          fi
+        run: npm install -g npm-check-updates
 
       - name: Update dependencies
-        if: steps.check-deps.outputs.deps_outdated == 'true'
+        run: ncu -u && npm install
+
+      - name: Check for changes
         run: |
-          echo "Updating dependencies..."
-          npm update
-          echo "Dependencies updated successfully"
-          
-          # Generate changelog
-          echo "Generating changelog..."
-          {
-            echo "## Changelog"
-            echo ""
-            echo "### Updated Dependencies"
-            echo "```diff"
-            git diff package.json package-lock.json | cat
-            echo "```"
-          } >> update-report.md
-
-      - name: Create Pull Request
-        if: steps.check-deps.outputs.deps_outdated == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: 'chore: update dependencies'
-          title: 'chore: update dependencies'
-          body: |
-            Automated dependency update
-            
-            This PR updates outdated dependencies to their latest versions.
-            
-            $(cat update-report.md)
-            
-            ### Trigger Information
-            - Event: ${{ github.event_name }}
-            - Branch: ${{ github.ref }}
-            - Commit: ${{ github.sha }}
-            - Triggered by: ${{ github.actor }}
-          branch: chore/update-dependencies
-          delete-branch: true
-
-  self-update:
-    runs-on: macos-latest
-    permissions:
-      contents: write
-      pull-requests: write
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Debug Info
-        run: |
-          echo "Running on: $(uname -a)"
-          echo "Repository: ${{ github.repository }}"
-          echo "Event: ${{ github.event_name }}"
-          echo "Branch: ${{ github.ref }}"
-
-      - name: Check workflow version
-        id: check-workflow
-        run: |
-          CURRENT_VERSION=$(grep "uses: peter-evans/create-pull-request@" .github/workflows/dependency-update.yml | cut -d'@' -f2)
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/peter-evans/create-pull-request/releases/latest | grep "tag_name" | cut -d'"' -f4)
-          
-          echo "Current version: $CURRENT_VERSION"
-          echo "Latest version: $LATEST_VERSION"
-          
-          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-            echo "Workflow needs update"
-            echo "workflow_outdated=true" >> $GITHUB_OUTPUT
-            echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
-            
-            # Create workflow update report
-            {
-              echo "## Workflow Update Report"
-              echo ""
-              echo "### Current Configuration"
-              echo "```yaml"
-              cat .github/workflows/dependency-update.yml
-              echo "```"
-              echo ""
-              echo "### Version Update"
-              echo "- Current version: $CURRENT_VERSION"
-              echo "- Latest version: $LATEST_VERSION"
-            } > workflow-update-report.md
-          else
-            echo "Workflow is up to date"
-            echo "workflow_outdated=false" >> $GITHUB_OUTPUT
+          if git diff --quiet; then
+            echo "No updates found."
+            exit 0
           fi
 
-      - name: Update workflow
-        if: steps.check-workflow.outputs.workflow_outdated == 'true'
+      - name: Commit changes
         run: |
-          echo "Updating workflow file..."
-          sed -i '' "s/uses: peter-evans\/create-pull-request@.*/uses: peter-evans\/create-pull-request@${{ steps.check-workflow.outputs.latest }}/" .github/workflows/dependency-update.yml
-          echo "Workflow file updated"
-          
-          # Add diff to report
-          {
-            echo "### Changes"
-            echo "```diff"
-            git diff .github/workflows/dependency-update.yml | cat
-            echo "```"
-          } >> workflow-update-report.md
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b dependency-updates
+          git add package.json package-lock.json
+          git commit -m "chore: update dependencies"
 
-      - name: Create Pull Request for workflow update
-        if: steps.check-workflow.outputs.workflow_outdated == 'true'
+      - name: Push changes
+        run: git push -u origin dependency-updates --force
+
+      - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          commit-message: 'chore: update GitHub Actions workflow'
-          title: 'chore: update GitHub Actions workflow'
-          body: |
-            Automated workflow update
-            
-            $(cat workflow-update-report.md)
-            
-            ### Trigger Information
-            - Event: ${{ github.event_name }}
-            - Branch: ${{ github.ref }}
-            - Commit: ${{ github.sha }}
-            - Triggered by: ${{ github.actor }}
-          branch: chore/update-workflow
-          delete-branch: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: dependency-updates
+          base: main
+          title: "chore: update dependencies"
+          body: "Automated dependency updates"
+          labels: "dependencies"
+          draft: false
