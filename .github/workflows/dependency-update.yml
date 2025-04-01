@@ -3,10 +3,11 @@ name: Update Dependencies
 on:
   schedule:
     - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   update-deps:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest  # Changed to macOS
     permissions:
       contents: write
       pull-requests: write
@@ -55,4 +56,50 @@ jobs:
             $(cat outdated.json)
             ```
           branch: chore/update-dependencies
+          delete-branch: true
+
+  self-update:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check workflow version
+        id: check-workflow
+        run: |
+          CURRENT_VERSION=$(grep "uses: peter-evans/create-pull-request@" .github/workflows/dependency-update.yml | cut -d'@' -f2)
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/peter-evans/create-pull-request/releases/latest | grep "tag_name" | cut -d'"' -f4)
+          
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "workflow_outdated=true" >> $GITHUB_OUTPUT
+            echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "workflow_outdated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update workflow
+        if: steps.check-workflow.outputs.workflow_outdated == 'true'
+        run: |
+          sed -i '' "s/uses: peter-evans\/create-pull-request@.*/uses: peter-evans\/create-pull-request@${{ steps.check-workflow.outputs.latest }}/" .github/workflows/dependency-update.yml
+
+      - name: Create Pull Request for workflow update
+        if: steps.check-workflow.outputs.workflow_outdated == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore: update GitHub Actions workflow'
+          title: 'chore: update GitHub Actions workflow'
+          body: |
+            Automated workflow update
+            
+            This PR updates the GitHub Actions workflow to the latest version.
+            
+            - Current version: ${{ steps.check-workflow.outputs.current }}
+            - Latest version: ${{ steps.check-workflow.outputs.latest }}
+          branch: chore/update-workflow
           delete-branch: true 
