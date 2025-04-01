@@ -1,6 +1,9 @@
 name: Dependency Update PR
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 0 * * 1' # Runs every Monday at midnight UTC
   workflow_dispatch: # Allows manual trigger
