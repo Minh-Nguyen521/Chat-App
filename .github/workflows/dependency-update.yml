@@ -52,3 +52,7 @@ jobs:
           body: "Automated dependency updates"
           labels: "dependencies"
           draft: false
+      - name: Enable auto-merge
+        run: gh pr merge --auto --squash dependency-updates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
